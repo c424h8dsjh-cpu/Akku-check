@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Akku-Check Rad</title>
+<style>
+  :root{
+    --bg:#0f1214; --card:#181d20; --line:#2a3135; --text:#e9eef0; --muted:#8a979d;
+    --ok:#3ccf8e; --warn:#f2b33d; --bad:#ff5a4f; --accent:#4fb3ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:16px 14px 40px}
+  h1{font-size:22px;margin:4px 0 2px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:14px}
+  .banner{border-radius:14px;padding:14px 16px;margin-bottom:14px;font-weight:600}
+  .banner.ok{background:rgba(60,207,142,.12);color:var(--ok);border:1px solid rgba(60,207,142,.35)}
+  .banner.bad{background:rgba(255,90,79,.12);color:var(--bad);border:1px solid rgba(255,90,79,.4)}
+  .banner small{display:block;font-weight:400;color:var(--muted);margin-top:4px}
+  .settings{display:flex;gap:10px;margin-bottom:14px}
+  .settings label{flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 10px;font-size:12px;color:var(--muted)}
+  .settings input{display:block;width:100%;background:transparent;border:0;color:var(--text);font-size:18px;font-weight:600;padding:2px 0;outline:none}
+  .dev{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
+  .dev.bad{border-color:rgba(255,90,79,.6)}
+  .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .name{font-weight:600}
+  .status{font-size:12px;color:var(--muted)}
+  .pct{font-size:28px;font-weight:700;font-variant-numeric:tabular-nums}
+  .bar{height:8px;background:#242b2f;border-radius:6px;overflow:hidden;margin:10px 0}
+  .bar i{display:block;height:100%;width:0;background:var(--ok);transition:width .4s}
+  .stats{display:flex;gap:14px;font-size:14px;color:var(--muted)}
+  .stats b{color:var(--text);font-variant-numeric:tabular-nums}
+  .actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+  button{background:#232a2e;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:14px;cursor:pointer}
+  button.primary{background:var(--accent);color:#06121b;border-color:var(--accent);font-weight:600}
+  .small{font-size:12px;color:var(--muted)}
+  details{margin-top:10px}
+  details summary{font-size:13px;color:var(--muted);cursor:pointer}
+  .cfg{display:flex;gap:8px;margin-top:8px}
+  .cfg label{flex:1;font-size:12px;color:var(--muted)}
+  .cfg input,.cfg select{width:100%;margin-top:3px;background:#11161a;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px;font-size:14px}
+  .note{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:13px;color:var(--muted);margin-top:18px}
+  .note b{color:var(--text)}
+  dialog{background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:16px;width:min(340px,90vw)}
+  dialog::backdrop{background:rgba(0,0,0,.6)}
+  dialog input{width:100%;font-size:22px;padding:8px;margin:10px 0;background:#11161a;color:var(--text);border:1px solid var(--line);border-radius:10px}
+</style>
+</head>
+<body>
+<h1>🔋 Akku-Check</h1>
+<div class="sub" id="btinfo"></div>
+
+<div class="banner ok" id="banner">Alles bereit<small></small></div>
+
+<div class="settings">
+  <label>Ø Tempo (km/h)<input id="speed" type="number" inputmode="decimal" min="10" max="50" step="0.5"></label>
+  <label>Warnung unter (h)<input id="minH" type="number" inputmode="decimal" min="0" step="0.5"></label>
+  <label>Warnung unter (km)<input id="minKm" type="number" inputmode="numeric" min="0" step="5"></label>
+</div>
+
+<div id="list"></div>
+
+<div class="actions">
+  <button onclick="resetAll()">Werte zurücksetzen</button>
+</div>
+
+<div class="note">
+  <b>So rechnet die App:</b> Restzeit = Akku % × Nennlaufzeit. Sobald zwei Messungen mit Abstand vorliegen, nimmt sie stattdessen deine echte Entladerate (% pro Stunde). Reichweite = Restzeit × Ø-Tempo. Bei Geräten in km (Di2) umgekehrt.<br><br>
+  <b>Bluetooth:</b> Funktioniert auf dem iPhone nur im Browser <b>Bluefy</b> (nicht in Safari, nicht in der Claude-App). Sensor vorher am Wahoo kurz trennen, falls er sich nicht verbinden lässt. Liefert ein Gerät keinen Akkuwert (z. B. der Elemnt selbst), trag den Prozentwert per „Manuell“ ein.
+</div>
+
+<dialog id="dlg">
+  <form method="dialog" id="dlgForm">
+    <div id="dlgTitle" style="font-weight:600"></div>
+    <input id="dlgInput" type="number" inputmode="numeric" min="0" max="100" placeholder="%">
+    <div class="actions" style="justify-content:flex-end">
+      <button value="cancel" type="button" onclick="dlg.close()">Abbrechen</button>
+      <button value="ok" class="primary" type="submit">Speichern</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const DEFAULT_DEVICES = [
+  {id:"elemnt", name:"Wahoo Elemnt Ace", icon:"🖥️", unit:"h",  nominal:30,  hint:"Laut Wahoo grob bis 30 h – an deine Nutzung anpassen."},
+  {id:"di2",    name:"Shimano Di2",      icon:"⚙️", unit:"km", nominal:1000,hint:"Shimano gibt Reichweite in km an (stark vom Schaltverhalten abhängig)."},
+  {id:"assioma",name:"Favero Assioma",   icon:"⚡", unit:"h",  nominal:50,  hint:"Ca. 50 h laut Favero."},
+  {id:"radar",  name:"Sigma Radar-Rücklicht", icon:"🚨", unit:"h", nominal:8, hint:"Stark vom Lichtmodus abhängig – Wert aus Anleitung eintragen."},
+  {id:"h10",    name:"Polar H10",        icon:"❤️", unit:"h",  nominal:400, hint:"Knopfzelle CR2025, ca. 400 h."}
+];
+
+let store = load();
+const conns = {}; // id -> {device, char}
+const btOK = !!(navigator.bluetooth);
+
+function load(){
+  let s=null;
+  try{ s=JSON.parse(localStorage.getItem("akkucheck")); }catch(e){}
+  if(!s) s={speed:28,minH:2,minKm:40,devices:{}};
+  DEFAULT_DEVICES.forEach(d=>{
+    if(!s.devices[d.id]) s.devices[d.id]={nominal:d.nominal,unit:d.unit,readings:[]};
+  });
+  return s;
+}
+function save(){ try{ localStorage.setItem("akkucheck",JSON.stringify(store)); }catch(e){} }
+
+function addReading(id,pct){
+  const d=store.devices[id];
+  const last=d.readings[d.readings.length-1];
+  if(last && last.p===pct && Date.now()-last.t<60000) return;
+  d.readings.push({t:Date.now(),p:pct});
+  if(d.readings.length>200) d.readings.shift();
+  save(); render();
+}
+
+// returns remaining hours and km
+function estimate(id){
+  const d=store.devices[id];
+  const r=d.readings;
+  if(!r.length) return null;
+  const cur=r[r.length-1].p;
+  const speed=+store.speed||28;
+  let hours, method="Nennwert";
+  // measured discharge rate: earliest reading in last 48h with at least 3% drop and 20 min gap
+  const cutoff=Date.now()-48*3600e3;
+  const first=r.find(x=>x.t>cutoff);
+  if(first){
+    const dt=(r[r.length-1].t-first.t)/3600e3, dp=first.p-cur;
+    if(dt>=0.33 && dp>=3){ hours=cur/(dp/dt); method="gemessen"; }
+  }
+  if(hours===undefined){
+    if(d.unit==="h") hours=cur/100*d.nominal;
+    else hours=(cur/100*d.nominal)/speed;
+  }
+  return {pct:cur,hours,km:hours*speed,method,t:r[r.length-1].t};
+}
+
+function fmtH(h){ if(h>=100) return Math.round(h)+" h"; if(h>=10) return h.toFixed(0)+" h"; const m=Math.round(h*60); return Math.floor(m/60)+":"+String(m%60).padStart(2,"0")+" h"; }
+function fmtKm(k){ return k>=1000? (k/1000).toFixed(1)+" Tkm" : Math.round(k)+" km"; }
+function ago(t){ const m=Math.round((Date.now()-t)/60000); if(m<1) return "gerade"; if(m<60) return "vor "+m+" min"; const h=Math.round(m/60); if(h<48) return "vor "+h+" h"; return "vor "+Math.round(h/24)+" Tagen"; }
+
+function render(){
+  const list=document.getElementById("list");
+  const minH=+store.minH, minKm=+store.minKm;
+  const bad=[]; let missing=0;
+  list.innerHTML="";
+  DEFAULT_DEVICES.forEach(def=>{
+    const d=store.devices[def.id];
+    const e=estimate(def.id);
+    const isBad = e && (e.hours<minH || e.km<minKm);
+    if(isBad) bad.push(def.name); if(!e) missing++;
+    const c=conns[def.id];
+    const color = !e? "#444" : isBad? "var(--bad)" : e.pct<40? "var(--warn)" : "var(--ok)";
+    const el=document.createElement("div");
+    el.className="dev"+(isBad?" bad":"");
+    el.innerHTML=`
+      <div class="row">
+        <div><div class="name">${def.icon} ${def.name}</div>
+        <div class="status">${c?"🟢 verbunden":"⚪ nicht verbunden"}${e?" · "+ago(e.t):""}</div></div>
+        <div class="pct" style="color:${color}">${e?e.pct+"%":"–"}</div>
+      </div>
+      <div class="bar"><i style="width:${e?e.pct:0}%;background:${color}"></i></div>
+      <div class="stats">
+        <span>Restzeit <b>${e?fmtH(e.hours):"–"}</b></span>
+        <span>Reichweite <b>${e?fmtKm(e.km):"–"}</b></span>
+        <span>${e?e.method:""}</span>
+      </div>
+      <div class="actions">
+        ${btOK?`<button class="primary" onclick="connect('${def.id}')">${c?"Neu lesen":"Verbinden"}</button>`:""}
+        <button onclick="manual('${def.id}')">Manuell</button>
+      </div>
+      <details><summary>Laufzeit einstellen</summary>
+        <div class="cfg">
+          <label>Nennlaufzeit<input type="number" value="${d.nominal}" onchange="setCfg('${def.id}','nominal',this.value)"></label>
+          <label>Einheit<select onchange="setCfg('${def.id}','unit',this.value)">
+            <option value="h" ${d.unit==="h"?"selected":""}>Stunden</option>
+            <option value="km" ${d.unit==="km"?"selected":""}>Kilometer</option></select></label>
+        </div>
+        <div class="small" style="margin-top:6px">${def.hint}</div>
+      </details>`;
+    list.appendChild(el);
+  });
+  const b=document.getElementById("banner");
+  if(bad.length){
+    b.className="banner bad";
+    b.innerHTML=`⚠️ Laden: ${bad.join(", ")}<small>unter ${minH} h oder ${minKm} km Restreichweite</small>`;
+  }else{
+    b.className="banner ok";
+    b.innerHTML=missing===DEFAULT_DEVICES.length? `Noch keine Werte<small>Geräte verbinden oder Prozent manuell eintragen</small>`
+      : `✅ Alles reicht für ${minKm}+ km<small>${missing?missing+" Gerät(e) ohne Wert":"alle Geräte erfasst"}</small>`;
+  }
+}
+
+function setCfg(id,k,v){ store.devices[id][k]= k==="nominal"? Math.max(1,+v) : v; save(); render(); }
+
+let dlgId=null;
+const dlg=document.getElementById("dlg");
+function manual(id){
+  dlgId=id;
+  document.getElementById("dlgTitle").textContent=DEFAULT_DEVICES.find(d=>d.id===id).name+" – Akku in %";
+  const inp=document.getElementById("dlgInput"); inp.value="";
+  dlg.showModal(); setTimeout(()=>inp.focus(),50);
+}
+document.getElementById("dlgForm").addEventListener("submit",ev=>{
+  const v=parseInt(document.getElementById("dlgInput").value,10);
+  if(!isNaN(v) && v>=0 && v<=100) addReading(dlgId,v);
+});
+
+async function connect(id){
+  if(conns[id]){ try{ const v=await conns[id].char.readValue(); addReading(id,v.getUint8(0)); }catch(e){ delete conns[id]; render(); } return; }
+  try{
+    const device=await navigator.bluetooth.requestDevice({acceptAllDevices:true, optionalServices:["battery_service"]});
+    const server=await device.gatt.connect();
+    const svc=await server.getPrimaryService("battery_service");
+    const char=await svc.getCharacteristic("battery_level");
+    conns[id]={device,char};
+    device.addEventListener("gattserverdisconnected",()=>{ delete conns[id]; render(); });
+    const v=await char.readValue(); addReading(id,v.getUint8(0));
+    try{ await char.startNotifications(); char.addEventListener("characteristicvaluechanged",e=>addReading(id,e.target.value.getUint8(0))); }catch(e){}
+  }catch(err){
+    if(err && err.name!=="NotFoundError"){ showInfo("Kein Akkuwert lesbar: "+err.message+" – nutze „Manuell“."); }
+  }
+}
+function resetAll(){ DEFAULT_DEVICES.forEach(d=>store.devices[d.id].readings=[]); save(); render(); }
+
+function showInfo(t){ const i=document.getElementById("btinfo"); i.textContent=t; i.style.color="var(--warn)"; }
+
+["speed","minH","minKm"].forEach(k=>{
+  const el=document.getElementById(k); el.value=store[k];
+  el.addEventListener("change",()=>{ store[k]=+el.value; save(); render(); });
+});
+document.getElementById("btinfo").textContent = btOK
+  ? "Bluetooth verfügbar – Geräte direkt auslesen."
+  : "Kein Bluetooth in diesem Browser – für Live-Werte in Bluefy öffnen. Manuelle Eingabe geht überall.";
+// periodic re-read of connected devices
+setInterval(()=>{ Object.keys(conns).forEach(id=>conns[id].char.readValue().then(v=>addReading(id,v.getUint8(0))).catch(()=>{})); render(); },120000);
+render();
+</script>
+</body>
+</html>
