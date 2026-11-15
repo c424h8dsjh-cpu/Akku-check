@@ -4,23 +4,25 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Akku-Check">
 <title>Akku-Check Rad</title>
 <style>
-  :root{
-    --bg:#0f1214; --card:#181d20; --line:#2a3135; --text:#e9eef0; --muted:#8a979d;
-    --ok:#3ccf8e; --warn:#f2b33d; --bad:#ff5a4f; --accent:#4fb3ff;
-  }
+  :root{--bg:#0f1214;--card:#181d20;--line:#2a3135;--text:#e9eef0;--muted:#8a979d;
+    --ok:#3ccf8e;--warn:#f2b33d;--bad:#ff5a4f;--accent:#fc5200;}
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:16px 14px 40px}
+  body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:16px 14px 50px}
   h1{font-size:22px;margin:4px 0 2px}
+  h2{font-size:15px;margin:22px 0 8px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
   .sub{color:var(--muted);font-size:13px;margin-bottom:14px}
-  .banner{border-radius:14px;padding:14px 16px;margin-bottom:14px;font-weight:600}
+  .banner{border-radius:14px;padding:14px 16px;margin-bottom:12px;font-weight:600}
   .banner.ok{background:rgba(60,207,142,.12);color:var(--ok);border:1px solid rgba(60,207,142,.35)}
   .banner.bad{background:rgba(255,90,79,.12);color:var(--bad);border:1px solid rgba(255,90,79,.4)}
+  .banner.info{background:var(--card);color:var(--text);border:1px solid var(--line)}
   .banner small{display:block;font-weight:400;color:var(--muted);margin-top:4px}
-  .settings{display:flex;gap:10px;margin-bottom:14px}
-  .settings label{flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 10px;font-size:12px;color:var(--muted)}
-  .settings input{display:block;width:100%;background:transparent;border:0;color:var(--text);font-size:18px;font-weight:600;padding:2px 0;outline:none}
+  .actions{display:flex;gap:8px;flex-wrap:wrap}
+  button{background:#232a2e;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:14px;cursor:pointer}
+  button.primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
+  button.small{padding:6px 9px;font-size:13px}
   .dev{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
   .dev.bad{border-color:rgba(255,90,79,.6)}
   .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
@@ -28,214 +30,329 @@
   .status{font-size:12px;color:var(--muted)}
   .pct{font-size:28px;font-weight:700;font-variant-numeric:tabular-nums}
   .bar{height:8px;background:#242b2f;border-radius:6px;overflow:hidden;margin:10px 0}
-  .bar i{display:block;height:100%;width:0;background:var(--ok);transition:width .4s}
-  .stats{display:flex;gap:14px;font-size:14px;color:var(--muted)}
+  .bar i{display:block;height:100%;width:0;transition:width .4s}
+  .stats{display:flex;gap:14px;font-size:14px;color:var(--muted);flex-wrap:wrap}
   .stats b{color:var(--text);font-variant-numeric:tabular-nums}
-  .actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
-  button{background:#232a2e;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:14px;cursor:pointer}
-  button.primary{background:var(--accent);color:#06121b;border-color:var(--accent);font-weight:600}
-  .small{font-size:12px;color:var(--muted)}
   details{margin-top:10px}
   details summary{font-size:13px;color:var(--muted);cursor:pointer}
-  .cfg{display:flex;gap:8px;margin-top:8px}
-  .cfg label{flex:1;font-size:12px;color:var(--muted)}
-  .cfg input,.cfg select{width:100%;margin-top:3px;background:#11161a;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px;font-size:14px}
-  .note{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:13px;color:var(--muted);margin-top:18px}
-  .note b{color:var(--text)}
-  dialog{background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:16px;width:min(340px,90vw)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+  label.f{font-size:12px;color:var(--muted);display:block}
+  label.f input,label.f select{display:block;width:100%;margin-top:3px;background:#11161a;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px;font-size:15px}
+  .checks{display:flex;gap:14px;font-size:13px;color:var(--muted);margin-top:8px;flex-wrap:wrap}
+  .checks input{margin-right:4px}
+  .small{font-size:12px;color:var(--muted)}
+  .acts{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .act{display:flex;justify-content:space-between;gap:8px;padding:10px 12px;border-top:1px solid var(--line);font-size:14px}
+  .act:first-child{border-top:0}
+  .act .m{color:var(--muted);font-size:12px}
+  .box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:14px}
+  .box ol{margin:6px 0 0;padding-left:20px;color:var(--muted);font-size:13px}
+  .box code{background:#11161a;padding:1px 5px;border-radius:5px;color:var(--text);word-break:break-all}
+  dialog{background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:16px;width:min(360px,92vw);padding:16px}
   dialog::backdrop{background:rgba(0,0,0,.6)}
-  dialog input{width:100%;font-size:22px;padding:8px;margin:10px 0;background:#11161a;color:var(--text);border:1px solid var(--line);border-radius:10px}
+  .msg{font-size:13px;margin-top:8px;color:var(--warn);min-height:1em}
 </style>
 </head>
 <body>
 <h1>🔋 Akku-Check</h1>
-<div class="sub" id="btinfo"></div>
+<div class="sub" id="sub">Restlaufzeit aus deinen Strava-Fahrten</div>
 
-<div class="banner ok" id="banner">Alles bereit<small></small></div>
-
-<div class="settings">
-  <label>Ø Tempo (km/h)<input id="speed" type="number" inputmode="decimal" min="10" max="50" step="0.5"></label>
-  <label>Warnung unter (h)<input id="minH" type="number" inputmode="decimal" min="0" step="0.5"></label>
-  <label>Warnung unter (km)<input id="minKm" type="number" inputmode="numeric" min="0" step="5"></label>
-</div>
-
-<div id="list"></div>
+<div class="banner info" id="banner">Lade…</div>
 
 <div class="actions">
-  <button onclick="resetAll()">Werte zurücksetzen</button>
+  <button class="primary" id="btnSync">Strava synchronisieren</button>
+  <button id="btnManual">+ Fahrt manuell</button>
+  <button id="btnAll">Alle voll geladen</button>
+</div>
+<div class="msg" id="msg"></div>
+
+<h2>Geräte</h2>
+<div id="list"></div>
+
+<h2>Letzte Fahrten</h2>
+<div class="acts" id="acts"></div>
+
+<h2>Einstellungen</h2>
+<div class="box">
+  <div class="grid">
+    <label class="f">Ø Tempo km/h (leer = aus Strava)<input id="speed" type="number" inputmode="decimal" min="5" max="60" step="0.5"></label>
+    <label class="f">Erinnern unter … h<input id="minH" type="number" inputmode="decimal" min="0" step="0.5"></label>
+    <label class="f">Erinnern unter … km<input id="minKm" type="number" inputmode="numeric" min="0" step="5"></label>
+    <label class="f">Aktuell verwendet<input id="speedNow" type="text" readonly></label>
+  </div>
 </div>
 
-<div class="note">
-  <b>So rechnet die App:</b> Restzeit = Akku % × Nennlaufzeit. Sobald zwei Messungen mit Abstand vorliegen, nimmt sie stattdessen deine echte Entladerate (% pro Stunde). Reichweite = Restzeit × Ø-Tempo. Bei Geräten in km (Di2) umgekehrt.<br><br>
-  <b>Bluetooth:</b> Funktioniert auf dem iPhone nur im Browser <b>Bluefy</b> (nicht in Safari, nicht in der Claude-App). Sensor vorher am Wahoo kurz trennen, falls er sich nicht verbinden lässt. Liefert ein Gerät keinen Akkuwert (z. B. der Elemnt selbst), trag den Prozentwert per „Manuell“ ein.
+<h2>Strava-Verbindung</h2>
+<div class="box">
+  <div id="stravaState" style="margin-bottom:8px"></div>
+  <div class="grid">
+    <label class="f">Client ID<input id="cid" type="text" inputmode="numeric" autocomplete="off"></label>
+    <label class="f">Client Secret<input id="csec" type="password" autocomplete="off"></label>
+  </div>
+  <div class="actions" style="margin-top:10px">
+    <button class="primary" id="btnConnect">Mit Strava verbinden</button>
+    <button id="btnDisconnect">Trennen</button>
+  </div>
+  <ol>
+    <li>Öffne <code>strava.com/settings/api</code> und lege eine App an (Name z. B. „Akku-Check“, Kategorie egal).</li>
+    <li>Bei „Website“ und „Authorization Callback Domain“ trägst du ein: <code id="cbDomain"></code></li>
+    <li>Client ID und Client Secret hier eintragen, dann „Mit Strava verbinden“.</li>
+  </ol>
+  <div class="small" style="margin-top:8px">Die Zugangsdaten bleiben nur auf diesem iPhone gespeichert, nicht auf GitHub.</div>
 </div>
 
-<dialog id="dlg">
-  <form method="dialog" id="dlgForm">
-    <div id="dlgTitle" style="font-weight:600"></div>
-    <input id="dlgInput" type="number" inputmode="numeric" min="0" max="100" placeholder="%">
-    <div class="actions" style="justify-content:flex-end">
-      <button value="cancel" type="button" onclick="dlg.close()">Abbrechen</button>
-      <button value="ok" class="primary" type="submit">Speichern</button>
+<dialog id="dlgPct">
+  <form method="dialog" id="formPct">
+    <div id="pctTitle" style="font-weight:600"></div>
+    <div class="small" style="margin:4px 0 8px">Akkustand jetzt in % (z. B. vom ACE-Sensormenü abgelesen)</div>
+    <input id="pctInput" type="number" inputmode="numeric" min="0" max="100" style="width:100%;font-size:22px;padding:8px;background:#11161a;color:var(--text);border:1px solid var(--line);border-radius:10px">
+    <div class="actions" style="justify-content:flex-end;margin-top:12px">
+      <button type="button" id="pctCancel">Abbrechen</button>
+      <button class="primary" type="submit">Speichern</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgRide">
+  <form method="dialog" id="formRide">
+    <div style="font-weight:600;margin-bottom:8px">Fahrt ohne Strava hinzufügen</div>
+    <div class="grid">
+      <label class="f">Art<select id="rType"><option value="out">Rad draußen</option><option value="ind">Rad indoor</option><option value="run">Lauf</option></select></label>
+      <label class="f">Datum<input id="rDate" type="date"></label>
+      <label class="f">Stunden<input id="rH" type="number" inputmode="numeric" min="0" value="1"></label>
+      <label class="f">Minuten<input id="rM" type="number" inputmode="numeric" min="0" max="59" value="0"></label>
+      <label class="f">Kilometer<input id="rKm" type="number" inputmode="decimal" min="0" step="0.1"></label>
+    </div>
+    <div class="actions" style="justify-content:flex-end;margin-top:12px">
+      <button type="button" id="rideCancel">Abbrechen</button>
+      <button class="primary" type="submit">Hinzufügen</button>
     </div>
   </form>
 </dialog>
 
 <script>
-const DEFAULT_DEVICES = [
-  {id:"elemnt", name:"Wahoo Elemnt Ace", icon:"🖥️", unit:"h",  nominal:30,  hint:"Laut Wahoo grob bis 30 h – an deine Nutzung anpassen."},
-  {id:"di2",    name:"Shimano Di2",      icon:"⚙️", unit:"km", nominal:1000,hint:"Shimano gibt Reichweite in km an (stark vom Schaltverhalten abhängig)."},
-  {id:"assioma",name:"Favero Assioma",   icon:"⚡", unit:"h",  nominal:50,  hint:"Ca. 50 h laut Favero."},
-  {id:"radar",  name:"Sigma Radar-Rücklicht", icon:"🚨", unit:"h", nominal:8, hint:"Stark vom Lichtmodus abhängig – Wert aus Anleitung eintragen."},
-  {id:"h10",    name:"Polar H10",        icon:"❤️", unit:"h",  nominal:400, hint:"Knopfzelle CR2025, ca. 400 h."}
+var DEV=[
+  {id:'ace',name:'Wahoo ELEMNT ACE',icon:'🖥️',unit:'h',cap:30,use:100,out:1,ind:1,run:0,hint:'Laufzeit grob bis 30 h – an deine Erfahrung anpassen.'},
+  {id:'di2',name:'Shimano Di2',icon:'⚙️',unit:'km',cap:1000,use:100,out:1,ind:1,run:0,hint:'Shimano gibt die Reichweite in km an, stark vom Schalten abhängig.'},
+  {id:'assioma',name:'Favero Assioma',icon:'⚡',unit:'h',cap:50,use:100,out:1,ind:1,run:0,hint:'Ca. 50 h laut Favero.'},
+  {id:'radar',name:'Sigma Reco 80 Link (Radar)',icon:'🚨',unit:'h',cap:8,use:100,out:1,ind:0,run:0,hint:'Platzhalter – Laufzeit für deinen Leuchtmodus aus der Anleitung eintragen.'},
+  {id:'aura',name:'Sigma Aura 80 (Frontlicht)',icon:'🔦',unit:'h',cap:4,use:100,out:1,ind:0,run:0,hint:'Platzhalter – Laufzeit deiner Leuchtstufe aus der Anleitung. Fährst du nur teilweise mit Licht, „Nutzung“ senken.'},
+  {id:'h10',name:'Polar H10',icon:'❤️',unit:'h',cap:400,use:100,out:1,ind:1,run:1,hint:'Knopfzelle CR2025, ca. 400 h. Zählt auch Läufe.'}
 ];
-
-let store = load();
-const conns = {}; // id -> {device, char}
-const btOK = !!(navigator.bluetooth);
+var KEY='akkucheck2';
+var S=load();
 
 function load(){
-  let s=null;
-  try{ s=JSON.parse(localStorage.getItem("akkucheck")); }catch(e){}
-  if(!s) s={speed:28,minH:2,minKm:40,devices:{}};
-  DEFAULT_DEVICES.forEach(d=>{
-    if(!s.devices[d.id]) s.devices[d.id]={nominal:d.nominal,unit:d.unit,readings:[]};
+  var s=null; try{s=JSON.parse(localStorage.getItem(KEY));}catch(e){}
+  if(!s) s={speed:null,minH:2,minKm:40,cid:'',csec:'',tok:null,acts:[],lastSync:0,dev:{}};
+  DEV.forEach(function(d){
+    if(!s.dev[d.id]) s.dev[d.id]={cap:d.cap,use:d.use,out:d.out,ind:d.ind,run:d.run,chargedAt:null,startPct:100};
   });
   return s;
 }
-function save(){ try{ localStorage.setItem("akkucheck",JSON.stringify(store)); }catch(e){} }
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+function $(id){return document.getElementById(id);}
+function msg(t,ok){var m=$('msg');m.textContent=t||'';m.style.color=ok?'var(--ok)':'var(--warn)';}
 
-function addReading(id,pct){
-  const d=store.devices[id];
-  const last=d.readings[d.readings.length-1];
-  if(last && last.p===pct && Date.now()-last.t<60000) return;
-  d.readings.push({t:Date.now(),p:pct});
-  if(d.readings.length>200) d.readings.shift();
-  save(); render();
+/* ---------- activity logic ---------- */
+function cat(a){
+  var t=a.type||'';
+  if(/Run/.test(t)) return 'run';
+  if(t==='VirtualRide'||a.trainer) return 'ind';
+  if(/Ride|Velomobile|Handcycle/.test(t)) return 'out';
+  return 'other';
 }
-
-// returns remaining hours and km
-function estimate(id){
-  const d=store.devices[id];
-  const r=d.readings;
-  if(!r.length) return null;
-  const cur=r[r.length-1].p;
-  const speed=+store.speed||28;
-  let hours, method="Nennwert";
-  // measured discharge rate: earliest reading in last 48h with at least 3% drop and 20 min gap
-  const cutoff=Date.now()-48*3600e3;
-  const first=r.find(x=>x.t>cutoff);
-  if(first){
-    const dt=(r[r.length-1].t-first.t)/3600e3, dp=first.p-cur;
-    if(dt>=0.33 && dp>=3){ hours=cur/(dp/dt); method="gemessen"; }
-  }
-  if(hours===undefined){
-    if(d.unit==="h") hours=cur/100*d.nominal;
-    else hours=(cur/100*d.nominal)/speed;
-  }
-  return {pct:cur,hours,km:hours*speed,method,t:r[r.length-1].t};
+function counts(d,a){var c=cat(a);return (c==='out'&&d.out)||(c==='ind'&&d.ind)||(c==='run'&&d.run);}
+function autoSpeed(){
+  var o=S.acts.filter(function(a){return cat(a)==='out'&&a.mt>600&&a.dist>0;}).sort(function(a,b){return b.start-a.start;}).slice(0,20);
+  if(!o.length) return null;
+  var dist=0,mt=0;o.forEach(function(a){dist+=a.dist;mt+=a.mt;});
+  return Math.round(dist/mt*3.6*10)/10;
 }
+function speed(){return +S.speed||autoSpeed()||28;}
+function calc(id){
+  var d=S.dev[id]; if(!d.chargedAt) return null;
+  var used=0,n=0;
+  S.acts.forEach(function(a){
+    if(a.start>=d.chargedAt&&counts(d,a)){
+      n++;
+      used+= DEV_UNIT(id)==='h' ? a.mt/3600*d.use/100 : a.dist/1000*d.use/100;
+    }
+  });
+  var rem=Math.max(0,d.startPct/100*d.cap-used), sp=speed();
+  var remH= DEV_UNIT(id)==='h'? rem : rem/sp;
+  var remKm= DEV_UNIT(id)==='h'? rem*sp : rem;
+  return {rem:rem,pct:Math.round(rem/d.cap*100),remH:remH,remKm:remKm,used:used,n:n};
+}
+function DEV_UNIT(id){for(var i=0;i<DEV.length;i++) if(DEV[i].id===id) return DEV[i].unit;}
 
-function fmtH(h){ if(h>=100) return Math.round(h)+" h"; if(h>=10) return h.toFixed(0)+" h"; const m=Math.round(h*60); return Math.floor(m/60)+":"+String(m%60).padStart(2,"0")+" h"; }
-function fmtKm(k){ return k>=1000? (k/1000).toFixed(1)+" Tkm" : Math.round(k)+" km"; }
-function ago(t){ const m=Math.round((Date.now()-t)/60000); if(m<1) return "gerade"; if(m<60) return "vor "+m+" min"; const h=Math.round(m/60); if(h<48) return "vor "+h+" h"; return "vor "+Math.round(h/24)+" Tagen"; }
+/* ---------- formatting ---------- */
+function fmtH(h){if(h>=100) return Math.round(h)+' h'; if(h>=10) return h.toFixed(0)+' h'; var m=Math.round(h*60); return Math.floor(m/60)+':'+String(m%60).padStart(2,'0')+' h';}
+function fmtKm(k){return k>=1000?(k/1000).toFixed(1).replace('.',',')+' Tsd. km':Math.round(k)+' km';}
+function fmtDate(t){var d=new Date(t);return d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 
+/* ---------- render ---------- */
 function render(){
-  const list=document.getElementById("list");
-  const minH=+store.minH, minKm=+store.minKm;
-  const bad=[]; let missing=0;
-  list.innerHTML="";
-  DEFAULT_DEVICES.forEach(def=>{
-    const d=store.devices[def.id];
-    const e=estimate(def.id);
-    const isBad = e && (e.hours<minH || e.km<minKm);
-    if(isBad) bad.push(def.name); if(!e) missing++;
-    const c=conns[def.id];
-    const color = !e? "#444" : isBad? "var(--bad)" : e.pct<40? "var(--warn)" : "var(--ok)";
-    const el=document.createElement("div");
-    el.className="dev"+(isBad?" bad":"");
-    el.innerHTML=`
-      <div class="row">
-        <div><div class="name">${def.icon} ${def.name}</div>
-        <div class="status">${c?"🟢 verbunden":"⚪ nicht verbunden"}${e?" · "+ago(e.t):""}</div></div>
-        <div class="pct" style="color:${color}">${e?e.pct+"%":"–"}</div>
-      </div>
-      <div class="bar"><i style="width:${e?e.pct:0}%;background:${color}"></i></div>
-      <div class="stats">
-        <span>Restzeit <b>${e?fmtH(e.hours):"–"}</b></span>
-        <span>Reichweite <b>${e?fmtKm(e.km):"–"}</b></span>
-        <span>${e?e.method:""}</span>
-      </div>
-      <div class="actions">
-        ${btOK?`<button class="primary" onclick="connect('${def.id}')">${c?"Neu lesen":"Verbinden"}</button>`:""}
-        <button onclick="manual('${def.id}')">Manuell</button>
-      </div>
-      <details><summary>Laufzeit einstellen</summary>
-        <div class="cfg">
-          <label>Nennlaufzeit<input type="number" value="${d.nominal}" onchange="setCfg('${def.id}','nominal',this.value)"></label>
-          <label>Einheit<select onchange="setCfg('${def.id}','unit',this.value)">
-            <option value="h" ${d.unit==="h"?"selected":""}>Stunden</option>
-            <option value="km" ${d.unit==="km"?"selected":""}>Kilometer</option></select></label>
-        </div>
-        <div class="small" style="margin-top:6px">${def.hint}</div>
-      </details>`;
+  var list=$('list'), minH=+S.minH, minKm=+S.minKm, bad=[], missing=0;
+  list.innerHTML='';
+  DEV.forEach(function(def){
+    var d=S.dev[def.id], r=calc(def.id);
+    var isBad=r&&(r.remH<minH||r.remKm<minKm);
+    if(isBad) bad.push(def.name.split(' (')[0]);
+    if(!r) missing++;
+    var color=!r?'#444':isBad?'var(--bad)':r.pct<40?'var(--warn)':'var(--ok)';
+    var el=document.createElement('div'); el.className='dev'+(isBad?' bad':'');
+    el.innerHTML=
+      '<div class="row"><div><div class="name">'+def.icon+' '+esc(def.name)+'</div>'+
+      '<div class="status">'+(d.chargedAt?('Stand '+d.startPct+' % am '+fmtDate(d.chargedAt)+' · '+r.n+' Fahrt'+(r.n===1?'':'en')+' seitdem'):'Noch kein Ladestand – tippe „Voll geladen“')+'</div></div>'+
+      '<div class="pct" style="color:'+color+'">'+(r?r.pct+'%':'–')+'</div></div>'+
+      '<div class="bar"><i style="width:'+(r?r.pct:0)+'%;background:'+color+'"></i></div>'+
+      '<div class="stats"><span>Restzeit <b>'+(r?fmtH(r.remH):'–')+'</b></span><span>Reichweite <b>'+(r?fmtKm(r.remKm):'–')+'</b></span></div>'+
+      '<div class="actions" style="margin-top:10px"><button class="small primary" data-full="'+def.id+'">Voll geladen</button><button class="small" data-pct="'+def.id+'">Stand setzen</button></div>'+
+      '<details><summary>Einstellungen</summary><div class="grid">'+
+        '<label class="f">Volle Laufzeit<input type="number" inputmode="decimal" value="'+d.cap+'" data-cfg="cap" data-id="'+def.id+'"></label>'+
+        '<label class="f">Einheit<input type="text" readonly value="'+(def.unit==='h'?'Stunden':'Kilometer')+'"></label>'+
+        '<label class="f">Nutzung pro Fahrt (%)<input type="number" inputmode="numeric" min="0" max="100" value="'+d.use+'" data-cfg="use" data-id="'+def.id+'"></label></div>'+
+        '<div class="checks"><label><input type="checkbox" data-chk="out" data-id="'+def.id+'"'+(d.out?' checked':'')+'>Rad draußen</label>'+
+        '<label><input type="checkbox" data-chk="ind" data-id="'+def.id+'"'+(d.ind?' checked':'')+'>Indoor</label>'+
+        '<label><input type="checkbox" data-chk="run" data-id="'+def.id+'"'+(d.run?' checked':'')+'>Laufen</label></div>'+
+        '<div class="small" style="margin-top:6px">'+esc(def.hint)+'</div></details>';
     list.appendChild(el);
   });
-  const b=document.getElementById("banner");
+  var b=$('banner');
   if(bad.length){
-    b.className="banner bad";
-    b.innerHTML=`⚠️ Laden: ${bad.join(", ")}<small>unter ${minH} h oder ${minKm} km Restreichweite</small>`;
+    b.className='banner bad';
+    b.innerHTML='⚠️ Laden: '+esc(bad.join(', '))+'<small>Reicht nicht mehr für '+minH+' h oder '+minKm+' km</small>';
+  }else if(missing===DEV.length){
+    b.className='banner info';
+    b.innerHTML='Los geht’s<small>Lade deine Geräte voll und tippe „Alle voll geladen“. Ab dann zählt die App jede Strava-Fahrt mit.</small>';
   }else{
-    b.className="banner ok";
-    b.innerHTML=missing===DEFAULT_DEVICES.length? `Noch keine Werte<small>Geräte verbinden oder Prozent manuell eintragen</small>`
-      : `✅ Alles reicht für ${minKm}+ km<small>${missing?missing+" Gerät(e) ohne Wert":"alle Geräte erfasst"}</small>`;
+    b.className='banner ok';
+    b.innerHTML='✅ Alles reicht für '+minH+' h / '+minKm+' km'+(missing?'<small>'+missing+' Gerät(e) ohne Ladestand</small>':'');
   }
+  $('sub').textContent = S.lastSync ? 'Zuletzt mit Strava abgeglichen: '+fmtDate(S.lastSync) : 'Restlaufzeit aus deinen Strava-Fahrten';
+  renderActs(); renderSettings();
+}
+function renderActs(){
+  var box=$('acts'), a=S.acts.slice().sort(function(x,y){return y.start-x.start;}).slice(0,8);
+  if(!a.length){box.innerHTML='<div class="act"><span class="m">Noch keine Fahrten. Mit Strava verbinden oder manuell hinzufügen.</span></div>';return;}
+  var lbl={out:'Rad',ind:'Indoor',run:'Lauf',other:'Sonstiges'};
+  box.innerHTML=a.map(function(x){
+    return '<div class="act"><div><div>'+esc(x.name||lbl[cat(x)])+'</div><div class="m">'+fmtDate(x.start)+' · '+lbl[cat(x)]+(x.manual?' · manuell':'')+'</div></div>'+
+      '<div style="text-align:right"><div>'+(x.dist/1000).toFixed(1).replace('.',',')+' km</div><div class="m">'+fmtH(x.mt/3600)+'</div>'+
+      (x.manual?'<button class="small" data-del="'+x.id+'" style="margin-top:4px">Löschen</button>':'')+'</div></div>';
+  }).join('');
+}
+function renderSettings(){
+  $('speed').value=S.speed||''; $('minH').value=S.minH; $('minKm').value=S.minKm;
+  var a=autoSpeed(); $('speedNow').value=speed()+' km/h'+(S.speed?' (fest)':a?' (Strava)':' (Standard)');
+  $('cid').value=S.cid||''; $('csec').value=S.csec||'';
+  $('cbDomain').textContent=location.hostname||'deine GitHub-Seite';
+  $('stravaState').innerHTML=S.tok?'<span style="color:var(--ok)">● Mit Strava verbunden</span>':'<span style="color:var(--muted)">○ Nicht verbunden</span>';
 }
 
-function setCfg(id,k,v){ store.devices[id][k]= k==="nominal"? Math.max(1,+v) : v; save(); render(); }
+/* ---------- events ---------- */
+document.addEventListener('click',function(e){
+  var t=e.target;
+  if(t.dataset.full){setCharged(t.dataset.full,100);}
+  else if(t.dataset.pct){openPct(t.dataset.pct);}
+  else if(t.dataset.del){S.acts=S.acts.filter(function(a){return String(a.id)!==t.dataset.del;});save();render();}
+});
+document.addEventListener('change',function(e){
+  var t=e.target, id=t.dataset.id;
+  if(t.dataset.cfg&&id){var v=+t.value; if(t.dataset.cfg==='cap') v=Math.max(0.1,v); if(t.dataset.cfg==='use') v=Math.min(100,Math.max(0,v)); S.dev[id][t.dataset.cfg]=v; save(); render();}
+  if(t.dataset.chk&&id){S.dev[id][t.dataset.chk]=t.checked?1:0; save(); render();}
+});
+function setCharged(id,pct){S.dev[id].chargedAt=Date.now(); S.dev[id].startPct=pct; save(); render();}
+$('btnAll').onclick=function(){DEV.forEach(function(d){S.dev[d.id].chargedAt=Date.now();S.dev[d.id].startPct=100;});save();render();msg('Alle Geräte auf 100 % gesetzt.',true);};
 
-let dlgId=null;
-const dlg=document.getElementById("dlg");
-function manual(id){
-  dlgId=id;
-  document.getElementById("dlgTitle").textContent=DEFAULT_DEVICES.find(d=>d.id===id).name+" – Akku in %";
-  const inp=document.getElementById("dlgInput"); inp.value="";
-  dlg.showModal(); setTimeout(()=>inp.focus(),50);
-}
-document.getElementById("dlgForm").addEventListener("submit",ev=>{
-  const v=parseInt(document.getElementById("dlgInput").value,10);
-  if(!isNaN(v) && v>=0 && v<=100) addReading(dlgId,v);
+var pctId=null;
+function openPct(id){pctId=id;$('pctTitle').textContent=DEV.filter(function(d){return d.id===id;})[0].name;$('pctInput').value='';$('dlgPct').showModal();}
+$('pctCancel').onclick=function(){$('dlgPct').close();};
+$('formPct').addEventListener('submit',function(){var v=parseInt($('pctInput').value,10); if(!isNaN(v)&&v>=0&&v<=100) setCharged(pctId,v);});
+
+$('btnManual').onclick=function(){$('rDate').value=new Date().toISOString().slice(0,10);$('rKm').value='';$('dlgRide').showModal();};
+$('rideCancel').onclick=function(){$('dlgRide').close();};
+$('formRide').addEventListener('submit',function(){
+  var type=$('rType').value, day=$('rDate').value, h=+$('rH').value||0, m=+$('rM').value||0, km=+$('rKm').value||0;
+  var start = day ? new Date(day+'T12:00:00').getTime() : Date.now();
+  if(day===new Date().toISOString().slice(0,10)) start=Date.now()-(h*3600+m*60)*1000;
+  var tmap={out:'Ride',ind:'VirtualRide',run:'Run'};
+  S.acts.push({id:'m'+Date.now(),manual:1,name:'Manuelle Fahrt',type:tmap[type],start:start,mt:h*3600+m*60,dist:km*1000,trainer:type==='ind'});
+  save(); render(); msg('Fahrt hinzugefügt.',true);
 });
 
-async function connect(id){
-  if(conns[id]){ try{ const v=await conns[id].char.readValue(); addReading(id,v.getUint8(0)); }catch(e){ delete conns[id]; render(); } return; }
-  try{
-    const device=await navigator.bluetooth.requestDevice({acceptAllDevices:true, optionalServices:["battery_service"]});
-    const server=await device.gatt.connect();
-    const svc=await server.getPrimaryService("battery_service");
-    const char=await svc.getCharacteristic("battery_level");
-    conns[id]={device,char};
-    device.addEventListener("gattserverdisconnected",()=>{ delete conns[id]; render(); });
-    const v=await char.readValue(); addReading(id,v.getUint8(0));
-    try{ await char.startNotifications(); char.addEventListener("characteristicvaluechanged",e=>addReading(id,e.target.value.getUint8(0))); }catch(e){}
-  }catch(err){
-    if(err && err.name!=="NotFoundError"){ showInfo("Kein Akkuwert lesbar: "+err.message+" – nutze „Manuell“."); }
-  }
-}
-function resetAll(){ DEFAULT_DEVICES.forEach(d=>store.devices[d.id].readings=[]); save(); render(); }
-
-function showInfo(t){ const i=document.getElementById("btinfo"); i.textContent=t; i.style.color="var(--warn)"; }
-
-["speed","minH","minKm"].forEach(k=>{
-  const el=document.getElementById(k); el.value=store[k];
-  el.addEventListener("change",()=>{ store[k]=+el.value; save(); render(); });
+['speed','minH','minKm'].forEach(function(k){
+  $(k).addEventListener('change',function(){var v=$(k).value; S[k]= k==='speed' ? (v?+v:null) : +v; save(); render();});
 });
-document.getElementById("btinfo").textContent = btOK
-  ? "Bluetooth verfügbar – Geräte direkt auslesen."
-  : "Kein Bluetooth in diesem Browser – für Live-Werte in Bluefy öffnen. Manuelle Eingabe geht überall.";
-// periodic re-read of connected devices
-setInterval(()=>{ Object.keys(conns).forEach(id=>conns[id].char.readValue().then(v=>addReading(id,v.getUint8(0))).catch(()=>{})); render(); },120000);
-render();
+$('cid').addEventListener('change',function(){S.cid=$('cid').value.trim();save();});
+$('csec').addEventListener('change',function(){S.csec=$('csec').value.trim();save();});
+
+/* ---------- Strava ---------- */
+function redirectUri(){return location.origin+location.pathname;}
+$('btnConnect').onclick=function(){
+  S.cid=$('cid').value.trim(); S.csec=$('csec').value.trim(); save();
+  if(!S.cid||!S.csec){msg('Bitte zuerst Client ID und Client Secret eintragen.');return;}
+  if(!/^https:/.test(location.href)||/claude\.ai|claudeusercontent/.test(location.hostname)){msg('Die Strava-Verbindung klappt nur auf deiner GitHub-Seite, nicht hier in der Vorschau.');return;}
+  location.href='https://www.strava.com/oauth/authorize?client_id='+encodeURIComponent(S.cid)+'&redirect_uri='+encodeURIComponent(redirectUri())+'&response_type=code&approval_prompt=auto&scope=activity:read_all';
+};
+$('btnDisconnect').onclick=function(){S.tok=null;save();render();msg('Strava getrennt.',true);};
+$('btnSync').onclick=function(){sync();};
+
+function tokenReq(params){
+  params.client_id=S.cid; params.client_secret=S.csec;
+  return fetch('https://www.strava.com/oauth/token',{method:'POST',body:new URLSearchParams(params)})
+    .then(function(r){return r.json().then(function(j){if(!r.ok||!j.access_token) throw new Error(j.message||('Fehler '+r.status)); return j;});})
+    .then(function(j){S.tok={access:j.access_token,refresh:j.refresh_token,exp:j.expires_at};save();});
+}
+function getToken(){
+  if(!S.tok) return Promise.reject(new Error('nicht verbunden'));
+  if(S.tok.exp-120>Date.now()/1000) return Promise.resolve(S.tok.access);
+  return tokenReq({grant_type:'refresh_token',refresh_token:S.tok.refresh}).then(function(){return S.tok.access;});
+}
+function sync(){
+  if(!S.tok){msg('Noch nicht mit Strava verbunden – unten unter „Strava-Verbindung“ einrichten.');return;}
+  msg('Hole Fahrten von Strava…',true);
+  var times=DEV.map(function(d){return S.dev[d.id].chargedAt;}).filter(Boolean);
+  var from=(times.length?Math.min.apply(null,times):Date.now()-30*864e5)-864e5;
+  var after=Math.floor(from/1000), got=0;
+  getToken().then(function(tok){
+    function page(p){
+      return fetch('https://www.strava.com/api/v3/athlete/activities?per_page=100&page='+p+'&after='+after,{headers:{Authorization:'Bearer '+tok}})
+        .then(function(r){if(!r.ok) throw new Error('Strava antwortet mit '+r.status); return r.json();})
+        .then(function(list){
+          list.forEach(function(a){
+            var o={id:a.id,name:a.name,type:a.sport_type||a.type,start:Date.parse(a.start_date),mt:a.moving_time||0,dist:a.distance||0,trainer:!!a.trainer};
+            var i=S.acts.findIndex(function(x){return x.id===o.id;});
+            if(i>=0) S.acts[i]=o; else S.acts.push(o);
+            got++;
+          });
+          if(list.length===100&&p<5) return page(p+1);
+        });
+    }
+    return page(1);
+  }).then(function(){
+    var cut=Date.now()-180*864e5; S.acts=S.acts.filter(function(a){return a.start>cut;});
+    S.lastSync=Date.now(); save(); render();
+    msg(got+' Aktivität'+(got===1?'':'en')+' von Strava geladen.',true);
+  }).catch(function(e){
+    msg('Strava-Abgleich fehlgeschlagen: '+e.message+'. Du kannst Fahrten solange manuell eintragen.');
+  });
+}
+
+/* ---------- start ---------- */
+(function init(){
+  var q=new URLSearchParams(location.search);
+  if(q.get('error')){msg('Strava-Freigabe abgebrochen.');history.replaceState(null,'',redirectUri());}
+  else if(q.get('code')){
+    var code=q.get('code'); history.replaceState(null,'',redirectUri());
+    msg('Verbinde mit Strava…',true);
+    tokenReq({grant_type:'authorization_code',code:code}).then(function(){render();sync();})
+      .catch(function(e){msg('Verbindung fehlgeschlagen: '+e.message);});
+  } else if(S.tok && Date.now()-S.lastSync>10*60*1000){ sync(); }
+  render();
+})();
 </script>
 </body>
 </html>
